@@ -1,4 +1,4 @@
-prepData <- function(read_dir = "H:/Docs/Sports/Project/raw_data", write_dir = "H:/Docs/Sports/Project/wd", years = c(2002:2009, 2011,2012)){
+prepData <- function(read_dir = "H:/Docs/Sports/Project/raw_data", write_dir = "H:/Docs/Sports/Project/wd", years = c(2002:2009, 2011,2012)){ #9min
       setwd(read_dir)
       
       for (i in years){
@@ -8,6 +8,7 @@ prepData <- function(read_dir = "H:/Docs/Sports/Project/raw_data", write_dir = "
             year_data <- addPType(year_data)
             year_data <- addConvert(year_data)
             
+            setwd(write_dir)
             write.csv(year_data, paste(as.character(i), "_nfl_pbp_dataP.csv", sep=""))
       }
 }
@@ -45,10 +46,15 @@ addConvert <- function(data){
       
       data[,"convert"] <- FALSE
       
-      for(i in 1:(nrow(data) - 1)){
+      for(i in 1:(nrow(data) - 2)){
             
             if((((data[i + 1,"down"] == 1) | (data[i + 1, "offscore"] > data[i, "offscore"])) & (data[i, "off"] == data[i + 1, "off"]) & (data[i,"down"]) != 0)|((data[i+2, "offscore"]-data[i, "offscore"]==7)&(data[i, "off"]==data[i+2, "off"]))){
                   data[i,"convert"] <- TRUE
             }
       }
+      #if(){
+      #      data[nrow(data) - 1, "convert"] <- TRUE
+      #}
+      
+      return(data)
 }
