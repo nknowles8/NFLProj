@@ -28,20 +28,6 @@ addPType <- function(data){                                             #this fu
       return(data)
 }
 
-addPType2 <- function(data){                                             #this function classifies each play as "Run", "Pass", or "Other"
-      
-      data[,"pType"] <- "Other"
-      
-      for(i in 1:nrow(data)){
-            if((grepl("tackle", data[i, "description"])>0)|(grepl("end", data[i, "description"])>0)|(grepl("up the middle", data[i, "description"])>0)|(grepl("guard", data[i, "description"])==1)&(grepl("scramble", data[i, "description"])==0)){
-                  data[i,"pType"] <- "Run"
-            } else if((grepl("pass", data[i, "description"])>0)|(grepl("sacked", data[i, "description"])>0)|(grepl("scramble", data[i, "description"])>0)){
-                  data[i,"pType"] <- "Pass"
-            } 
-      }
-      return(data)
-}
-
 addConvert <- function(data){
       
       data[,"convert"] <- FALSE
@@ -53,11 +39,11 @@ addConvert <- function(data){
             }
       }
       
-      if(((data[nrow(data), "down"] == 1)|(grepl("TOUCHDOWN", data[nrow(data - 1), "description"]) > 1)|(grepl("GOOD", data[nrow(data - 1), "description"]) > 1))&(data[nrow(data), "off"] == data[nrow(data) - 1,  "off"])){
+      if(((data[nrow(data), "down"] == 1)|grepl("TOUCHDOWN", data[nrow(data) - 1, "description"])|grepl("GOOD", data[nrow(data) - 1, "description"]))&(data[nrow(data), "off"] == data[nrow(data) - 1,  "off"])){
             data[nrow(data) - 1, "convert"] <- TRUE
       }
       
-      if((grepl("TOUCHDOWN", data[nrow(data), "description"]) > 1)|(grepl("GOOD", data[nrow(data), "description"]) > 1)){
+      if(grepl("TOUCHDOWN", data[nrow(data), "description"])|grepl("GOOD", data[nrow(data), "description"])){
             data[nrow(data), "convert"] <- TRUE
       }
       
