@@ -1,15 +1,16 @@
 prepData <- function(read_dir = "H:/Docs/Sports/Project/raw_data", write_dir = "H:/Docs/Sports/Project/wd", years = c(2002:2009, 2011,2012)){ #9min
-      setwd(read_dir)
       
-      for (i in years){
+      for (i in years){                                                 #i would like to add code to this loop that prints its progress
+            setwd(read_dir)
             year_data <- read.csv(paste(as.character(i), "_nfl_pbp_data.csv", sep = ""))
             year_data <- subset(year_data, select = -c(season,qtr))     #these are redundant columns
             year_data[is.na(year_data)] <- 0                            #replace NAs with 0s -- makes evaluating boolean expressions easy
-            year_data <- addPType(year_data)
+            year_data <- addPType2(year_data)
             year_data <- addConvert(year_data)
             
             setwd(write_dir)
             write.csv(year_data, paste(as.character(i), "_nfl_pbp_dataP.csv", sep=""))
+            cat(paste(as.character(i), " has been completed..."))
       }
 }
 
@@ -23,12 +24,45 @@ addPType <- function(data){                                             #this fu
                   data[i,"pType"] <- "Run"
             } else if((grepl("pass", desc[i])>0)|(grepl("sacked", desc[i])>0)|(grepl("scramble", desc[i])>0)){
                   data[i,"pType"] <- "Pass"
-            } 
-      }
+            } else if(grepl("field goal", desc[i])){
+                  data[i, "pType"] <- "FG"
+            } else if(grepl("punt", desc[i])){
+                  data[i, "pType"] <- "Punt"
+            }else if(grepl("PENALTY", desc[i])){
+                  data[i, "pType"] <- "Pen"
+            }
+      }                                                                 
       return(data)
 }
 
-addConvert <- function(data){
+addPType2 <- function(data){                                             #this function classifies each play as "Run", "Pass", or "Other"
+      
+      data[,"pType"] <- "Run"
+      desc <- data[,"description"]                                      #seems to marginally decrease computation time
+      
+      for(i in 1:nrow(data)){
+            if((grepl("pass", desc[i])>0)|(grepl("sacked", desc[i])>0)|(grepl("scramble", desc[i])>0)){
+                  data[i,"pType"] <- "Pass"
+            } else if(grepl("field goal", desc[i])){
+                  data[i, "pType"] <- "FG"
+            } else if(grepl("punt", desc[i])){
+                  data[i, "pType"] <- "Punt"
+            } else if(grepl("No Play", desc[i])){   #this needs to be checked
+                  data[i, "pType"] <- "Pen"
+            } else if (grepl("kicks", desc[i])){
+                  data[i, "pType"] <- "KO"
+            } else if (grepl("extra point", desc[i])){
+                  data[i, "pType"] <- "PAT"
+            } else if (grepl("kneels", desc[i])){
+                  data[i, "pType"] <- "Kneel"
+            } else if (grepl("borted", desc[i])){
+                  data[i, "pType"] <- "Aborted"
+            }                                               #need to add 2pt attempts
+      }                                                                 
+      return(data)
+}
+
+addConvert <- function(data){                   #i would like to change this function s.t. it only has values for Run or Pass plays
       
       data[,"convert"] <- FALSE
       
