@@ -52,9 +52,14 @@ addConvert <- function(data){
                   data[i,"convert"] <- TRUE
             }
       }
-      #if(){
-      #      data[nrow(data) - 1, "convert"] <- TRUE
-      #}
+      
+      if(((data[nrow(data), "down"] == 1)|(grepl("TOUCHDOWN", data[nrow(data - 1), "description"]) > 1)|(grepl("GOOD", data[nrow(data - 1), "description"]) > 1))&(data[nrow(data), "off"] == data[nrow(data) - 1,  "off"])){
+            data[nrow(data) - 1, "convert"] <- TRUE
+      }
+      
+      if((grepl("TOUCHDOWN", data[nrow(data), "description"]) > 1)|(grepl("GOOD", data[nrow(data), "description"]) > 1)){
+            data[nrow(data), "convert"] <- TRUE
+      }
       
       return(data)
 }
