@@ -28,6 +28,11 @@ loadData <- function(dir = "H:/Docs/Sports/Project/wd", years = 2012, teams = NU
       return(result)
 }
 
+runPassSummary <- function(data, ydline.spec = 20:80, down.spec = 1:4, distance.spec = 1:40, trim_last_five = FALSE, score_diff = -21:21){
+      data <- subsetData(data, ydline.spec, down.spec, distance.spec, trim_last_five, score_diff)
+      # this function will produce a play selection pie chart for a particular situation
+}
+
 addPType <- function(data){                                             #this function classifies each play as "Run", "Pass", or "Other"
       
       data[,"pType"] <- "Other"
@@ -98,7 +103,7 @@ addConvert <- function(data){                   #i would like to change this fun
       return(data)
 }
 
-subsetData <- function(datadata, ydline.spec = 20:80, down.spec = 1:4, distance.spec = 1:40, trim_last_five = FALSE, score_diff = -21:21){
+subsetData <- function(data, ydline.spec = 20:80, down.spec = 1:4, distance.spec = 1:40, trim_last_five = FALSE, score_diff = -21:21){
       #this function trims the dataset according to user specifications
       #data is the dataset to be trimmed; field.spec is a string that equals "middle", "own20", "redzone", or "all"; off.spec and def.spec
       #are 2 to 3 letter strings corresponding to each team; down.spect is a vector of numbers describing downs to include; distance.spec
