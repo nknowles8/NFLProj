@@ -20,7 +20,7 @@ loadData <- function(dir = "H:/Docs/Sports/Project/wd", years = 2012, teams = NU
       
       for (i in years){
             year_data <- read.csv(paste(as.character(i), "_nfl_pbp_dataP.csv", sep=""))
-            if teams != NULL{
+            if (!is.null(teams)){
                   year_data <- subset(year_data, (off %in% teams)|(def %in% teams))
             }
             result = rbind(result, year_data)
@@ -28,9 +28,14 @@ loadData <- function(dir = "H:/Docs/Sports/Project/wd", years = 2012, teams = NU
       return(result)
 }
 
-runPassSummary <- function(data, ydline.spec = 20:80, down.spec = 1:4, distance.spec = 1:40, trim_last_five = FALSE, score_diff = -21:21){
+runPassSummary <- function(data, ydline.spec = 20:80, down.spec = 1:4, distance.spec = 1:20, trim_last_five = TRUE, score_diff = -21:21){
+      
       data <- subsetData(data, ydline.spec, down.spec, distance.spec, trim_last_five, score_diff)
-      # this function will produce a play selection pie chart for a particular situation
+      sumData <- cbind(runPassVsToGo(data, distance.spec), runConv(data, distance.spec)[,3], passConv(data, distance.spec)[,3])
+      result <- matrix(nrow = 0, ncol = 5, dimnames = list(NULL, c("toGo", "nObs", "runRate", "runConv", "passConv")))
+      result <- rbind(result, sumData)
+      
+      return(result)
 }
 
 addPType <- function(data){                                             #this function classifies each play as "Run", "Pass", or "Other"
@@ -113,8 +118,56 @@ subsetData <- function(data, ydline.spec = 20:80, down.spec = 1:4, distance.spec
       #i need to add code to specify off and def
       
       if (trim_last_five == TRUE){ 
-            data <- subset(data, (min %in% c(5:30, 35:60)) | (qtr %in% c(1,3)))
+            data <- subset(data, (min %in% c(5:30, 35:60)) )#| (qtr %in% c(1,3)))
       }
       
-      data <- subset(data, (down %in% down.spec)&(ydline %in% ydline.spec)&(togo %in% distance.spec)&((offscore - defscore) %in% score_dif))
+      data <- subset(data, (down %in% down.spec)&(ydline %in% ydline.spec)&(togo %in% distance.spec)&((offscore - defscore) %in% score_diff))
+}
+
+conVsToGo <- function(data, distance.spec = 1:25){
+      #this function returns a matrix with 3 columns listing the number of yards to go, the number of observations from
+      #the data and the converstion rate with that number of yards to go.
+      
+      result <- matrix(nrow = 0, ncol = 3, dimnames = list(NULL, c("toGo", "nObs", "convRate")))
+      
+      for (i in distance.spec){
+            subs <- subset(data, (togo == i) & (pType %in% c("Run", "Pass")))
+            result <- rbind(result, c(i, nrow(subs), sum(subs[,"convert"])/nrow(subs)))
+      }
+      return(result)
+}
+
+runPassVsToGo <- function(data, distance.spec = 1:25){
+      #this function returns a matrix with 3 columns listing the number of yards to go, the number of observations from
+      #the data and the run% with that number of yards to go.
+      
+      result <- matrix(nrow = 0, ncol = 3, dimnames = list(NULL, c("toGo", "nObs", "runPassRate")))
+      temp <- NULL
+      
+      for (i in distance.spec){
+            subs <- subset(data, (togo == i))
+            temp <- table(subs[, "pType"])
+            result <- rbind(result, c(i, nrow(subs), temp[8]/(temp[8]+temp[4])))
+      }
+      return(result)
+}
+
+runConv <- function(data, distance.spec = 1:25){
+      result <- matrix(nrow = 0, ncol = 3, dimnames = list(NULL, c("toGo", "nObs", "runConv")))
+      
+      for (i in distance.spec){
+            subs <- subset(data, (togo == i)&(pType == 'Run'))
+            result <- rbind(result, c(i, nrow(subs), sum(subs[, "convert"])/nrow(subs)))
+      }
+      return(result)
+}
+
+passConv <- function(data, distance.spec = 1:25){
+      result <- matrix(nrow = 0, ncol = 3, dimnames = list(NULL, c("toGo", "nObs", "passConv")))
+      
+      for (i in distance.spec){
+            subs <- subset(data, (togo == i)&(pType == 'Pass'))
+            result <- rbind(result, c(i, nrow(subs), sum(subs[, "convert"])/nrow(subs)))
+      }
+      return(result)
 }
