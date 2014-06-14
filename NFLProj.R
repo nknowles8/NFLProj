@@ -1,8 +1,8 @@
 prepData <- function(read_dir = "H:/Docs/Sports/Project/raw_data", write_dir = "H:/Docs/Sports/Project/wd", years = c(2002:2009, 2011,2012)){ #9min
       
-      for (i in years){                                                 #i would like to add code to this loop that prints its progress
+      for (i in years){                                                 
             setwd(read_dir)
-            year_data <- read.csv(paste(as.character(i), "_nfl_pbp_data.csv", sep = ""))
+            year_data <- read.csv(paste(as.character(i), "_nfl_pbp_data.csv", sep = "", quote = ""))
             year_data <- subset(year_data, select = -c(season,qtr))     #these are redundant columns
             year_data[is.na(year_data)] <- 0                            #replace NAs with 0s -- makes evaluating boolean expressions easy
             year_data <- addPType2(year_data)
@@ -10,7 +10,7 @@ prepData <- function(read_dir = "H:/Docs/Sports/Project/raw_data", write_dir = "
             
             setwd(write_dir)
             write.csv(year_data, paste(as.character(i), "_nfl_pbp_dataP.csv", sep=""))
-            cat(paste(as.character(i), " has been completed..."))
+            cat(paste(as.character(i), " has been completed...\n"))
       }
 }
 
@@ -147,7 +147,7 @@ runPassVsToGo <- function(data, distance.spec = 1:25){
       for (i in distance.spec){
             subs <- subset(data, (togo == i))
             temp <- table(subs[, "pType"])
-            result <- rbind(result, c(i, nrow(subs), temp[8]/(temp[8]+temp[4])))
+            result <- rbind(result, c(i, nrow(subs), temp["Run"]/(temp["Run"]+temp["Pass"])))
       }
       return(result)
 }
@@ -170,4 +170,101 @@ passConv <- function(data, distance.spec = 1:25){
             result <- rbind(result, c(i, nrow(subs), sum(subs[, "convert"])/nrow(subs)))
       }
       return(result)
+}
+
+getSummary <- function(data, OFF = NULL, DEF = NULL, DOWN = 1:4, threshold = 1:15){
+      result <- matrix(nrow = 0, ncol = 6, dimnames = list(NULL, c("down", "toGo", "nObs", "runRate", "runConv", "passConv")))
+      
+      if (!is.null(OFF)){
+            data <- subset(data, off %in% OFF)
+      }
+      
+      if(!is.null(DEF)){
+            data <- subset(data, def %in% DEF)
+      }
+      
+      for (i in DOWN){
+            down <- rep(i, max(threshold))
+            data2 <- subset(data, down == i)
+            
+            sumData <- cbind(down, runPassVsToGo(data2, threshold), runConv(data2, threshold)[,3], passConv(data2, threshold)[,3])
+            
+            result <- rbind(result, sumData)
+      }
+      
+      result <- data.frame(result)
+      result[,1] <- as.factor(result[,1])
+      return(result)
+}
+
+playSummary <- function(data, OFF = NULL, DEF = NULL, DOWN = 1:4, distance = 1:15){
+      
+      
+      result <- getSummary(data, OFF, DEF, DOWN, distance)
+      df.work <- NULL
+      
+      if(length(distance) > 1){
+            if(length(DOWN) > 1){
+                  p <- ggplot(result, aes(toGo, runRate))
+                  p + geom_point(aes(color = down)) + geom_line(aes(color = down)) + ylim(0, 1) + theme_bw() + ggtitle(paste('Off:', OFF, 'Def:', DEF, 'Down:', min(DOWN), 'to', max(DOWN))) + scale_x_continuous(breaks = seq(1, max(distance), 1))
+            }
+            else if(length(DOWN == 1)){
+                  p <- ggplot(result, aes(x = toGo))
+                  p <- p + geom_line(aes(y = runRate, colour="Run Rate")) + ylim(0, 1) + theme_bw() + ggtitle(paste('Off:', OFF, 'Def:', DEF, 'Down:', DOWN)) + scale_x_continuous(breaks = seq(1, max(distance), 1))
+                  p <- p + geom_line(aes(y = passConv, colour = "Pass Conversion"), linetype = "dashed")
+                  p <- p + geom_line(aes(y = runConv, colour = "Run Conversion"), linetype = "dashed") + scale_colour_discrete(name = "Legend")
+                  p + geom_point(aes(y = runConv, colour="Run Conversion")) + geom_point(aes(y = passConv, colour = "Pass Conversion")) + geom_point(aes(y = runRate, colour = "Run Rate"))
+            }
+      }
+      else if(length(distance) == 1){
+            if(length(DOWN) > 1){
+                  print('Please specify DOWN')
+            }
+            else if(length(DOWN == 1)){
+                  #comb <- data.frame("Summary" = c((1- result[1,4])*result[1,6], (1- result[1,4])*(1-result[1,6]), result[1,4]*result[1,5], result[1,4]*(1-result[1,5])), 
+                  #                   Description = c("Converted Pass", "Failed Pass", "Converted Run", "Failed Run"),
+                  #                   Test = c(1,1,1,1))#list(NULL, c("Converted Pass", "Failed Pass", "Converted Run", "Failed Run")))
+                  #comb <- matrix(c("Converted Pass", "Failed Pass", "Converted Run", "Failed Run"), nrow = 4, ncol = 1)
+                  #comb[,1] <- c("Converted Pass", "Failed Pass", "Converted Run", "Failed Run")                
+                  #comb[,2] <- c((1- result[1,4])*result[1,6], (1- result[1,4])*(1-result[1,6]), result[1,4]*result[1,5], result[1,4]*(1-result[1,5]))
+                  
+                  #comb <- rbind(comb, c("Converted Pass", (1- result[1,4])*result[1,6]))
+                  
+                  #p <- ggplot(data = comb, aes(x=factor(1), y = Summary, fill = factor(Description)))
+                  #p <- p + geom_bar(width = 1)
+                  #p +facet(grid(facets=. ~ Test))
+                  
+                  #p <- ggplot(comb)
+                  #p <- p + facet_grid(as.factor(comb[,1]) ~ comb[,2])
+                  #p
+                  df.work <- subset(data, (pType == 'Run')|(pType == 'Pass'))
+                  df.work$pType <- droplevels(df.work$pType)
+                  mosaicplot(df.work$pType ~ df.work$convert, color = 2:3)
+            }
+      }
+     
+      #return(result)
+      #p2 <- ggplot(result, aes(toGo, runConv))
+      #p2 + geom_point(aes(color = down),) + geom_line(aes(color = down)) + ylim(0, 1) + theme_bw() + ggtitle(paste('off =', OFF, 'def =', DEF, 'down =', min(DOWN), 'to', max(DOWN)))
+
+      #p3 <- ggplot(result, aes(toGo, passConv))
+      #p3 + geom_point(aes(color = down),) + geom_line(aes(color = down)) + ylim(0, 1) + theme_bw() + ggtitle(paste('off =', OFF, 'def =', DEF, 'down =', min(DOWN), 'to', max(DOWN)))
+}
+
+downSummary <- function(data, OFF = NULL, DEF = NULL, DOWN = 3, threshold = 10){
+      
+      result <- getSummary(data, OFF, DEF, DOWN, threshold)
+      grp <- result[,3:5]
+      
+      p <- ggplot(result, aes(x = toGo))
+      p <- p + geom_line(aes(y = runConv, colour="Run Conversion")) + ylim(0, 1) + theme_bw() + ggtitle(paste('Off:', OFF, 'Def:', DEF, 'Down:', DOWN)) + scale_x_continuous(breaks = seq(1, max(threshold), 1))
+      p <- p + geom_line(aes(y = passConv, colour = "Pass Conversion"))
+      p <- p + geom_line(aes(y = runRate, colour = "RunRate")) + scale_colour_discrete(name = "Legend")
+      p
+      #return(result)
+      #p2 <- ggplot(result, aes(toGo, runConv))
+      #p2 + geom_point(aes(color = down),) + geom_line(aes(color = down)) + ylim(0, 1) + theme_bw() + ggtitle(paste('off =', OFF, 'def =', DEF, 'down =', min(DOWN), 'to', max(DOWN)))
+      
+      #p3 <- ggplot(result, aes(toGo, passConv))
+      #p3 + geom_point(aes(color = down),) + geom_line(aes(color = down)) + ylim(0, 1) + theme_bw() + ggtitle(paste('off =', OFF, 'def =', DEF, 'down =', min(DOWN), 'to', max(DOWN)))
 }
